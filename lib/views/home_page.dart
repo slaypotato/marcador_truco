@@ -11,6 +11,8 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _playerOne = Player(name: "TIME 1", score: 0, victories: 0);
   final _playerTwo = Player(name: "TIME 2", score: 0, victories: 0);
+  Color _appBarBackgroundColor = Colors.indigo;
+  String _appBarText = "Marcador Pontos (Truco!)";
 
   @override
   void initState() {
@@ -28,6 +30,10 @@ class _HomePageState extends State<HomePage> {
   void _resetPlayers({bool resetVictories = true}) {
     _resetPlayer(player: _playerOne, resetVictories:  resetVictories);
     _resetPlayer(player: _playerTwo, resetVictories:  resetVictories);
+    setState(() {
+      _appBarBackgroundColor = Colors.indigo;
+      _appBarText = "Marcador Pontos (Truco!)";
+    });
   }
 
   void _checkPlayerWin({required Player player}) {
@@ -50,12 +56,39 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _checkIronHand() {
+    if(_playerOne.score == 11 && _playerTwo.score == 11) {
+      setState(() {
+        _appBarBackgroundColor = Colors.red;
+        _appBarText = "Marcador Pontos (Truco!) - Mão de Ferro";
+      });
+    }
+  }
+
+  Player _updateScore({required Player player, String operator = '+'}) {
+    if (operator == '+') {
+      if (player.score == 11) {
+        _checkIronHand();
+      }
+      if (player.score >= 12) {
+        _checkPlayerWin(player: (player));
+      } else {
+        player.score++;
+      }
+    } else if (operator == '-') {
+      if (player.score > 0 ) {
+        player.score--;
+      }
+    }
+    return player;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.indigo,
-        title: const Text("Marcador Pontos (Truco!)"),
+        backgroundColor: _appBarBackgroundColor,
+        title: Text(_appBarText),
         actions: <Widget>[
           IconButton(
             onPressed: () {
@@ -63,7 +96,12 @@ class _HomePageState extends State<HomePage> {
                   title: 'Zerar',
                   message:
                   'Tem certeza que deseja começar novamente a pontuação?',
-                  confirm: () {},
+                  confirm: () {_showDialog(
+                      title: 'Zerar Vitórias',
+                      message: 'Deseja resetar as vitórias também?',
+                      confirm: () {_resetPlayers();},
+                      cancel: () {_resetPlayers(resetVictories: false);}
+                  );},
                   cancel: () {}
               );
             },
@@ -82,7 +120,7 @@ class _HomePageState extends State<HomePage> {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
-          _showPlayerName(player.name),
+          _showPlayerName(player),
           _showPlayerScore(player.score),
           _showPlayerVictories(player.victories),
           _showScoreButtons(player),
@@ -102,13 +140,16 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _showPlayerName(String name) {
-    return Text(
-      name.toUpperCase(),
-      style: const TextStyle(
-          fontSize: 22.0,
-          fontWeight: FontWeight.w500,
-          color: Colors.black),
+  Widget _showPlayerName(Player player) {
+    return TextButton(
+      style: TextButton.styleFrom(
+        textStyle: const TextStyle(
+            fontSize: 22.0,
+            fontWeight: FontWeight.w500,
+            color: Colors.black),
+      ),
+      onPressed: () { _nameChangeDialog(player: player);},
+      child: Text(player.name.toUpperCase()),
     );
   }
 
@@ -158,7 +199,7 @@ class _HomePageState extends State<HomePage> {
           color: Colors.black.withOpacity(0.1),
           onTap: () {
             setState(() {
-              player.score--;
+              _updateScore(player: player, operator: '-');
             });
           },
         ),
@@ -167,7 +208,7 @@ class _HomePageState extends State<HomePage> {
           color: Colors.indigoAccent,
           onTap: () {
             setState(() {
-              player.score++;
+              _updateScore(player: player, operator: '+');
             });
             _checkPlayerWin(player: player);
           },
@@ -177,31 +218,65 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _showDialog(
-      {required String title, required String message, required Function confirm, required Function cancel}) {
+      {
+        required String title,
+        required String message,
+        required Function confirm,
+        required Function cancel
+      }) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
+        return WillPopScope(
+          onWillPop: () async => false,
+          child: AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: <Widget>[
+              ElevatedButton(
+                child: const Text("CANCEL"),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  cancel();
+                },
+              ),
+              ElevatedButton(
+                child: const Text("OK"),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  confirm();
+                },
+              ),
+            ],
+        ));
+      },
+    );
+  }
+
+  void _nameChangeDialog({required Player player}) {
+    showDialog(
+      context: context,
+      builder: (context) {
         return AlertDialog(
-          title: Text(title),
-          content: Text(message),
+          title: Text('Change ${player.name} name to:'),
+          content: TextField(
+            onChanged: (value) {
+              setState(() {
+                player.name = value;
+              });
+            },
+          ),
           actions: <Widget>[
-            ElevatedButton(
-              child: const Text("CANCEL"),
-              onPressed: () {
-                Navigator.of(context).pop();
-                cancel();
-              },
-            ),
             ElevatedButton(
               child: const Text("OK"),
               onPressed: () {
                 Navigator.of(context).pop();
-                confirm();
               },
             ),
           ],
         );
-      },
+      }
     );
   }
 }
