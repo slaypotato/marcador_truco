@@ -67,13 +67,13 @@ class _HomePageState extends State<HomePage> {
 
   Player _updateScore({required Player player, String operator = '+'}) {
     if (operator == '+') {
-      if (player.score == 11) {
-        _checkIronHand();
-      }
       if (player.score >= 12) {
         _checkPlayerWin(player: (player));
       } else {
         player.score++;
+        if (player.score == 11) {
+          _checkIronHand();
+        }
       }
     } else if (operator == '-') {
       if (player.score > 0 ) {
